@@ -1,0 +1,3 @@
+selenium
+pyTelegramBotAPI
+python-dotenv

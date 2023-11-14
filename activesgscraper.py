@@ -11,12 +11,14 @@ from dotenv import load_dotenv
 
 def getVenues(browser):
     # select badminton as activity choice
-    browser.find_element_by_id("activity_filter_chosen").click()
-    browser.find_elements_by_class_name("active-result")[1].click()
+    browser.find_element("id", "activity_filter_chosen").click()
+    browser.find_elements("class name", "active-result")[1].click()
     time.sleep(1)
     # Find venues that are sport hall and not school
-    venue_select_element = browser.find_element_by_name("venue_filter")
-    return [(x.get_attribute("innerText"), x.get_attribute("value")) for x in venue_select_element.find_elements_by_tag_name("option") if 'sports hall' in x.get_attribute('innerText').lower() and notSchool(x.get_attribute('innerText').lower())]
+    venue_select_element = browser.find_element("name", "venue_filter")
+
+    # return [(x.get_attribute("innerText"), x.get_attribute("value")) for x in venue_select_element.find_elements("tag name", "option") if 'sport hall' in x.get_attribute('innerText').lower() and notSchool(x.get_attribute('innerText').lower())]
+    return [(x.get_attribute("innerText"), x.get_attribute("value")) for x in venue_select_element.find_elements("tag name", "option")]
 
 
 def notSchool(venue):
@@ -47,7 +49,7 @@ def get_all_slots():
             url = f"https://members.myactivesg.com/facilities/view/activity/18/venue/{hid}?time_from={epochTime}" # 18 here is badminton activity_id
             browser.get(url)
 
-            available_courts = browser.find_elements_by_css_selector(".timeslot-container .subvenue-slot input[name='timeslots[]']")
+            available_courts = browser.find_elements("css selector", ".timeslot-container .subvenue-slot input[name='timeslots[]']")
             if len(available_courts) == 0:
                 print(f"{h_name} has no available courts on {date}")
             else:
@@ -68,9 +70,9 @@ bot = telebot.TeleBot(os.getenv("API_KEY"))
 # navigate to login page
 browser.get("https://members.myactivesg.com/auth")
 
-browser.find_element_by_id("email").send_keys(os.getenv('username'))
-browser.find_element_by_id("password").send_keys(os.getenv('password'))
-browser.find_element_by_id("btn-submit-login").click()
+browser.find_element("id", "email").send_keys(os.getenv('username'))
+browser.find_element("id", "password").send_keys(os.getenv('password'))
+browser.find_element("id", "btn-submit-login").click()
 time.sleep(2)
 
 # navigate to booking page
@@ -84,7 +86,11 @@ def getHalls(message):
     venues = venues or getVenues(browser)
     reply = ""
     for name,id in venues:
-        reply += f"{id}: {name}\n"
+        if len(reply + f"{id}: {name}\n") >= 4096:
+            bot.send_message(message.chat.id, reply)
+            reply = f"{id}: {name}\n"
+        else:
+            reply += f"{id}: {name}\n"
     bot.send_message(message.chat.id, reply)
 
 @bot.message_handler(func=get_hall_slots)
@@ -102,10 +108,10 @@ def get_slots_for_hall(message):
         h_name = result[0]
         reply = ""
         for epochTime in nextFiveDaysEpoch:
-            date = datetime.fromtimestamp(epochTime).strftime('%d-%m-%Y')
+            date = datetime.fromtimestamp(epochTime).strftime('%A %d-%m-%Y')
             url = f"https://members.myactivesg.com/facilities/view/activity/18/venue/{hid}?time_from={epochTime}" # 18 here is badminton activity_id
             browser.get(url)
-            available_courts = browser.find_elements_by_css_selector(".timeslot-container .subvenue-slot input[name='timeslots[]']")
+            available_courts = browser.find_elements("css selector", ".timeslot-container .subvenue-slot input[name='timeslots[]']")
             if len(available_courts) != 0:
                 reply += f"Found available courts at {h_name} on {date}\n"
                 for court in available_courts:
